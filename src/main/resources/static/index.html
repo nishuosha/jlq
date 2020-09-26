@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <link rel="stylesheet" href="css/layui.css">
+    <script src="layui.js"></script>
+    <script src="echarts.js"></script>
+</head>
+<body>
+
+<form class="layui-form" action="" lay-filter="example">
+
+    <div class="layui-form-item" style="width: 400px;">
+        <label class="layui-form-label">查询条件</label>
+        <div class="layui-input-block">
+            <select name="type" lay-filter="type">
+                <option value="age">年龄</option>
+                <option value="length">里程</option>
+                <option value="time">时间</option>
+            </select>
+        </div>
+    </div>
+
+
+    <div class="layui-form-item">
+        <div class="layui-inline" name="base">
+            <label class="layui-form-label">查询范围</label>
+            <div class="layui-input-inline" style="width: 100px;">
+                <input type="number" name="begin1"  autocomplete="off" class="layui-input">
+            </div>
+            <div class="layui-form-mid">-</div>
+            <div class="layui-input-inline" style="width: 100px;" name="end1">
+                <input type="number" name="end1" autocomplete="off" class="layui-input">
+            </div>
+
+
+
+        </div>
+    </div>
+
+    <div class="layui-form-item">
+        <div class="layui-input-block">
+            <button type="button" class="layui-btn" lay-submit="" lay-filter="condition">添加条件</button>
+            <button type="submit" class="layui-btn" lay-submit="" lay-filter="query">查询</button>
+        </div>
+    </div>
+
+    <div style="width: 1110px;">
+
+        <table class="layui-hide" id="data"></table>
+
+    </div>
+    <div>
+        <div id="lineChart" style="width: 900px; height: 600px; display: inline-block"></div>
+        <div id="pieChart" style="width: 900px; height: 600px; display: inline-block"></div>
+    </div>
+
+</form>
+</body>
+<script>
+
+    // layui.config({
+    //     base: './'
+    // }).extend({
+    //     echarts: 'echarts/echarts'
+    // })
+
+    layui.use(['form', 'jquery', 'table', 'echarts', 'layer'], function () {
+        var form = layui.form;
+        var $ = layui.jquery;
+        var table = layui.table;
+        var echarts = layui.echarts;
+        var layer = layui.layer;
+        form.render();
+        var i = 1;
+        $("button[lay-filter='condition']").click(function (){
+            i = i + 1
+            var element = '<div class="layui-input-inline" style="width: 100px;"><input type="number" name="begin' + i + '" autocomplete="off" class="layui-input"></div><div class="layui-form-mid">-</div><div class="layui-input-inline" style="width: 100px;"><input type="number" name="end' + i + '" autocomplete="off" class="layui-input"></div>'
+            $("div[name='base']").append(element)
+        })
+
+        var lineOption = {
+            title: {
+                text: '查询结果',
+                subtext: '模拟数据',
+                left: 'center'
+            },
+            toolbox: {
+                feature: {
+
+                    restore: {},
+                    saveAsImage: {},
+                    dataView: {},
+                    magicType: {
+                        type: ['bar', 'line']
+                    }
+                }
+            },
+            tooltip: {
+                show: true,
+                trigger: 'axis'
+            },
+            xAxis: {
+                name: '查询条件',
+                type: 'category',
+                data: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+            },
+            yAxis: {
+                name: '数量',
+                type: 'value'
+            },
+            series: [{
+                data: [820, 932, 901, 934, 1290, 1330, 1320],
+                type: 'line'
+            }]
+        }
+
+        var pieOption = {
+            title: {
+                text: '查询结果',
+                subtext: '模拟数据',
+                left: 'center'
+            },
+            tooltip: {
+                trigger: 'item',
+                formatter: '{a} <br/>{b}: {c} ({d}%)'
+            },
+            legend: {
+                orient: 'vertical',
+                right: 10,
+                data: []
+            },
+            series: [
+                {
+                    name: '查询结果',
+                    type: 'pie',
+                    radius: '70%',
+                    center: ['50%', '60%'],
+                    data: [],
+                    emphasis: {
+                        itemStyle: {
+                            shadowBlur: 10,
+                            shadowOffsetX: 0,
+                            shadowColor: 'rgba(0, 0, 0, 0.5)'
+                        }
+                    }
+                }
+            ]
+        };
+
+        var tableOption = {
+            elem: '#data',
+            height: 312,
+            data: [],
+            page: true, //开启分页
+            limit: 20,
+            cols: [[ //表头
+                {field: 'key', title: '查询范围', sort: false, fixed: 'left', width:180},
+                {field: 'id', title: 'ID', width:180, sort: false},
+                {field: 'gender', title: '性别', width:180},
+                {field: 'birthyear', title: '出生日期', sort: false, width:180},
+                {field: 'totalTravelLength', title: '旅行里程', width:180},
+                {field: 'totalTravelTime', title: '旅行时长', width: 180},
+            ]]
+        }
+
+        form.on('submit(query)', function (data) {
+
+            //重置图表
+            var lineChart = echarts.init(document.getElementById("lineChart"));
+            var pieChart = echarts.init(document.getElementById("pieChart"));
+            lineOption.xAxis.data = []
+            lineOption.series[0].data = []
+            pieOption.legend.data = []
+            pieOption.series[0].data = []
+
+            var request = data.field
+            console.log(request)
+            var begin = "begin"
+            var end = "end"
+            var condition = ""
+            var type = request["type"]
+            for (var a = 0 ; a < i ; a++) {
+                var index_begin = begin + (a + 1)
+                var index_end = end + (a + 1)
+                condition = condition + request[index_begin] + "-" + request[index_end] + ";"
+            }
+            condition = condition.substr(0, condition.length - 1)
+
+            $.ajax({
+                type: 'GET',
+                contentType: 'application/text',
+                url: '/api/query?type=' + type + "&condition=" + condition,
+                success: function (ret) {
+                    if (ret.code === 0) {
+                        layer.msg("查询成功")
+                        var chartData = ret.data.chart
+                        for (var key in chartData) {
+                            lineOption.xAxis.data.push(key)
+                            pieOption.legend.data.push(key)
+                            lineOption.series[0].data.push(chartData[key])
+                            pieOption.series[0].data.push({
+                                name: key,
+                                value: chartData[key]
+                            })
+                        }
+                        //图标赋值
+                        tableOption.data = ret.data.table
+                        table.render(tableOption);
+                        lineChart.setOption(lineOption)
+                        pieChart.setOption(pieOption)
+                    } else if (ret.code === 6) {
+                        layer.alert(ret.message)
+                        tableOption.data = []
+                        table.render(tableOption);
+                        lineChart.setOption(lineOption)
+                        pieChart.setOption(pieOption)
+                    } else if (ret.code === 404) {
+                        layer.alert("暂无数据")
+                        tableOption.data = []
+                        table.render(tableOption);
+                        lineChart.setOption(lineOption)
+                        pieChart.setOption(pieOption)
+                    } else {
+                        layer.alert("其他异常")
+                        tableOption.data = []
+                        table.render(tableOption);
+                        lineChart.setOption(lineOption)
+                        pieChart.setOption(pieOption)
+                    }
+                },
+                error: function (e) {
+                    layer.alert(e)
+                }
+            })
+
+            return false;
+        });
+    });
+
+</script>
+
+</html>
